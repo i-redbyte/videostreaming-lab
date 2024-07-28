@@ -14,7 +14,7 @@ logging.getLogger("aiortc.rtcrtpsender").setLevel(logging.WARNING)
 class VideoStreamClient:
     def __init__(self):
         self.pc = RTCPeerConnection()
-        self.recorder = MediaRecorder('/Users/red_byte/PycharmProjects/simpleWebRTC-server/output.mp4')
+        self.recorder = MediaRecorder('output.mp4')
         self.data_channel = None
 
     async def handle_answer(self, answer):

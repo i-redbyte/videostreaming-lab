@@ -54,15 +54,19 @@ async def offer(request):
 
         pc.addTrack(video_track)
 
+        answer = await pc.createAnswer()
+
         for transceiver in pc.getTransceivers():
             if transceiver.sender.track:
                 transceiver.direction = "sendrecv"
+                transceiver._offerDirection = "sendrecv"
             elif transceiver.receiver.track:
                 transceiver.direction = "recvonly"
+                transceiver._offerDirection = "recvonly"
             else:
                 transceiver.direction = "inactive"
+                transceiver._offerDirection = "inactive"
 
-        answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
         logger.debug("Local description set")
         response = {
