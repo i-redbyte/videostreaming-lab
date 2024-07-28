@@ -4,7 +4,6 @@ from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay, MediaPlayer
 
-# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("server")
 
@@ -44,24 +43,26 @@ async def offer(request):
                 await pc.close()
                 pcs.discard(pc)
 
-        # Use the default camera on macOS with specific resolution and fps
-        player = MediaPlayer("default", format="avfoundation", options={"framerate": "30", "video_size": "640x480"})
+        player = MediaPlayer("default", format="avfoundation", options={
+            "framerate": "30", "video_size": "640x480", "pixel_format": "uyvy422"
+        })
         logger.debug("MediaPlayer created")
-        pc.addTrack(player.video)
+        video_track = player.video
 
         await pc.setRemoteDescription(offer)
         logger.debug("Remote description set")
+
+        pc.addTrack(video_track)
+
+        for transceiver in pc.getTransceivers():
+            if transceiver.sender.track:
+                transceiver.direction = "sendrecv"
+            elif transceiver.receiver.track:
+                transceiver.direction = "recvonly"
+            else:
+                transceiver.direction = "inactive"
+
         answer = await pc.createAnswer()
-
-        # Set the direction for all transceivers before setting local description
-        for t in pc.getTransceivers():
-            if t.sender.track:
-                t._offerDirection = "sendrecv"
-                t.direction = "sendrecv"
-            elif t.receiver.track:
-                t._offerDirection = "recvonly"
-                t.direction = "recvonly"
-
         await pc.setLocalDescription(answer)
         logger.debug("Local description set")
         response = {

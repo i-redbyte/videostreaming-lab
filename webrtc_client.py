@@ -1,24 +1,23 @@
 import asyncio
 import logging
 from aiohttp import ClientSession
-from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
+from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRecorder
-from typing import Dict, Any
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)  # Исправлено на basicConfig
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("client")
 
-# Reduce logging level for aiortc
 logging.getLogger("aiortc.rtcrtpreceiver").setLevel(logging.WARNING)
 logging.getLogger("aiortc.rtcrtpsender").setLevel(logging.WARNING)
+
 
 class VideoStreamClient:
     def __init__(self):
         self.pc = RTCPeerConnection()
         self.recorder = MediaRecorder('/Users/red_byte/PycharmProjects/simpleWebRTC-server/output.mp4')
+        self.data_channel = None
 
-    async def handle_answer(self, answer: Dict[str, Any]):
+    async def handle_answer(self, answer):
         await self.pc.setRemoteDescription(RTCSessionDescription(sdp=answer["sdp"], type=answer["type"]))
 
         @self.pc.on("track")
@@ -38,15 +37,8 @@ class VideoStreamClient:
         except Exception as e:
             logger.error("Error starting recorder: %s", e)
 
-    async def send_offer(self) -> Dict[str, Any]:
-        # Add a dummy video track
-        class DummyVideoTrack(MediaStreamTrack):
-            kind = "video"
-
-            async def recv(self):
-                pass
-
-        self.pc.addTrack(DummyVideoTrack())
+    async def send_offer(self):
+        self.data_channel = self.pc.createDataChannel('dummy')
 
         offer = await self.pc.createOffer()
         await self.pc.setLocalDescription(offer)
@@ -63,6 +55,7 @@ class VideoStreamClient:
         except Exception as e:
             logger.error("Error stopping recorder: %s", e)
         await self.pc.close()
+
 
 async def main():
     client = VideoStreamClient()
@@ -81,9 +74,9 @@ async def main():
             else:
                 logger.error("Failed to get a valid answer from server")
 
-    # Run for a fixed amount of time, then close
-    await asyncio.sleep(15)  # Increase the sleep time if needed
+    await asyncio.sleep(15)
     await client.close()
     logger.info("Client closed")
+
 
 asyncio.run(main())
