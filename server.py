@@ -2,7 +2,6 @@ import cv2
 import socket
 import threading
 import struct
-import sys
 
 stop_signal = threading.Event()
 
@@ -15,7 +14,10 @@ def video_stream(sock):
             break
         data = cv2.imencode('.jpg', frame)[1].tobytes()
         size = len(data)
-        sock.sendall(struct.pack(">L", size) + data)
+        try:
+            sock.sendall(struct.pack(">L", size) + data)
+        except socket.error:
+            break
     cap.release()
     sock.close()
 
